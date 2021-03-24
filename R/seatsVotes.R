@@ -2,44 +2,57 @@
 seatsVotes <- function(x,
                        desc=NULL,
                        method="uniformSwing"){
-
-  xok <- x[!is.na(x)]
-  if(length(xok)==0)
-    stop("no data to analyze after deleting missings")
   
-  if(any(!is.numeric(xok)))
-    stop("svCurve only defined for numeric data\n")
-  if(any(xok<0))
-    stop("negative vote shares not permitted\n")
-
-  if(any(xok>1) & !any(xok>100)){
-    cat("proceeding assuming supplied votes are percentages")
-    xLocal <- xok/100
-  }
-  else
-    xLocal <- xok
-
+  # xok <- x[!is.na(x)]
+  # if(length(xok)==0)
+  #   stop("no data to analyze after deleting missings")
+  # 
+  # if(any(!is.numeric(xok)))
+  #   stop("svCurve only defined for numeric data\n")
+  # if(any(xok<0))
+  #   stop("negative vote shares not permitted\n")
+  # 
+  # if(any(xok>1) & !any(xok>100)){
+  #   cat("proceeding assuming supplied votes are percentages")
+  #   xLocal <- xok/100
+  # }
+  # else
+  # xLocal <- xok
+  xLocal <- x
+  
   cl <- match.call()
   if(is.null(cl$method))
     cl$method <- method
-  
+  #print(xLocal)
   m <- 1001
+  col <- ncol(xLocal) # number of lines to plot (number of different maps)
   d0 <- seq(from=-1,to=1,length=m)
-  x0 <- rep(NA,m)
-  y0 <- rep(NA,m)
-  for(i in 1:m){
-    x0[i] <- mean(xLocal - d0[i],na.rm=TRUE)
-    y0[i] <- mean(xLocal - d0[i] > .5,
-                  na.rm=TRUE)
+  x0 <- matrix(nrow=m, ncol=col)
+  y0 <- matrix(nrow=m, ncol=col)
+  for(c in 1:col){ # loop through sets of data. 
+    for(r in 1:m){ # loop over deltas.
+      x0[r,c] <- mean(xLocal[,c] - d0[r],na.rm=TRUE)
+      y0[r,c] <- mean(xLocal[,c] - d0[r] > .5,
+                      na.rm=TRUE)
+    }
   }
-
-  inBounds <- x0 >= 0 & x0 <= 1
-  out <- list(s=y0[inBounds],
-              v=x0[inBounds],
-              x=xLocal,
-              desc=desc,
-              call=cl)
-
+  #print(x0)
+  #print(y0)
+  
+  # inBounds <- x0 >= 0 & x0 <= 1
+  # out <- list(s=y0[inBounds],
+  #             v=x0[inBounds],
+  #             x=xLocal,
+  #             desc=desc,
+  #             call=cl)
+  out <- list(
+    s=y0,
+    v=x0,
+    x=xLocal,
+    desc=desc,
+    call=cl
+  )
+  
   class(out)  <- "seatsVotes"
   out
 }
@@ -47,27 +60,27 @@ seatsVotes <- function(x,
 print.seatsVotes <- function(x,...){
   if(!inherits(x,"seatsVotes"))
     cat("print.svCurve only defined for objects of class seatsVotes\n")
-
+  
   if(is.null(match.call()$digits))
     digits <- .Options$digits
   else
     digits <- match.call()$digits
-
+  
   if(!is.null(x$desc))
     cat("Seats-Votes Curve:",x$desc,"\n")
-
+  
   cat("\nSummary of",
       length(x$x),
       "non-missing vote shares:\n")
   print(summary(x$x))
-
+  
   closestToFifty <- which.min(abs(x$v-.5))
   biasAtFifty <- x$s[closestToFifty] - .5
-
+  
   cat("Bias at Average Vote Share = .5 is",
       round(biasAtFifty,digits),
       "\n")
-
+  
   invisible(NULL)
 }
 
@@ -85,22 +98,22 @@ plot.seatsVotes <- function(x,
 {
   if(!inherits(x,"seatsVotes"))
     cat("plot.svCurve only defined for objects of class seatsVotes\n")
-
+  
   type <- match.arg(type)
   cl <- match.call()
-
-
+  
+  
   ## seats vote curve
   if(type=="seatsVotes"){
     oldpar <- par()
     par(mar=c(4.2,4,5,1),
         las=1)
-
+    
     if(is.null(cl$xlab))
       xlab <- "Average District Vote"
     else
       xlab <- cl$xlab
-
+    
     if(is.null(cl$ylab))
       ylab <- "Proportion of Seats Won"
     else
@@ -110,23 +123,23 @@ plot.seatsVotes <- function(x,
       xlim <- c(0,1)
     else
       xlim <- cl$xlim
-
+    
     if(is.null(cl$ylim))
       ylim <- c(0,1)
     else
       ylim <- cl$ylim
-
+    
     if(is.null(cl$xaxs))
       xaxs <- "i"
     else
       xaxs <- cl$xaxs
-
+    
     if(is.null(cl$yaxs))
       yaxs <- "i"
     else
       yaxs <- cl$yaxs
-
-    plot(x$v,x$s,type="l",
+    
+    plot(x$v[,1],x$s[,1],type="l",
          lwd=3,
          axes=FALSE,
          xaxs=xaxs,
@@ -136,6 +149,18 @@ plot.seatsVotes <- function(x,
          xlab=xlab,
          ylab=ylab,
          ...)
+    for(c in 2:ncol(x$x)) {
+      lines(x$v[,c],x$s[,c],type="l",
+            lwd=3,
+            axes=FALSE,
+            xaxs=xaxs,
+            yaxs=yaxs,
+            xlim=xlim,
+            ylim=ylim,
+            xlab=xlab,
+            ylab=ylab,
+            ...)
+    }
     axis(1,at=seq(0,1,by=.25))
     axis(2,at=seq(0,1,by=.25))
     abline(h=.5,lty=2)
@@ -167,7 +192,7 @@ plot.seatsVotes <- function(x,
     
     par(oldpar)
   }
-
+  
   if(type=="density"){
     if(is.null(cl$title)){
       if(is.null(x$desc))
@@ -182,12 +207,12 @@ plot.seatsVotes <- function(x,
       xlab <- "Vote Shares"
     else
       xlab <- cl$xlab
-
+    
     if(is.null(cl$ylab))
       ylab <- ""
     else
       ylab <- cl$ylab
-
+    
     if(transform){
       transFunc <- function(x){
         v <- log(x/(1-x))
@@ -205,11 +230,11 @@ plot.seatsVotes <- function(x,
                  from=min(xLocal,na.rm=TRUE),
                  to=max(xLocal,na.rm=TRUE),
                  ...
-                 ),
-         xlab=xlab,
-         ylab=ylab,
-         main=titleString,
-         axes=FALSE)
+    ),
+    xlab=xlab,
+    ylab=ylab,
+    main=titleString,
+    axes=FALSE)
     if(transform){
       tcks <- pretty(x$x)
       tcks <- transFunc(tcks)
