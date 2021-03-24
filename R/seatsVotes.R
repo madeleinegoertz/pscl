@@ -140,7 +140,7 @@ plot.seatsVotes <- function(x,
       yaxs <- cl$yaxs
     
     plot(x$v[,1],x$s[,1],type="l",
-         lwd=3,
+         lwd=1,
          axes=FALSE,
          xaxs=xaxs,
          yaxs=yaxs,
@@ -149,17 +149,19 @@ plot.seatsVotes <- function(x,
          xlab=xlab,
          ylab=ylab,
          ...)
-    for(c in 2:ncol(x$x)) {
-      lines(x$v[,c],x$s[,c],type="l",
-            lwd=3,
-            axes=FALSE,
-            xaxs=xaxs,
-            yaxs=yaxs,
-            xlim=xlim,
-            ylim=ylim,
-            xlab=xlab,
-            ylab=ylab,
-            ...)
+    if(ncol(x$x)>1) {
+      for(c in 2:ncol(x$x)) {
+        lines(x$v[,c],x$s[,c],type="l",
+              lwd=1,
+              axes=FALSE,
+              xaxs=xaxs,
+              yaxs=yaxs,
+              xlim=xlim,
+              ylim=ylim,
+              xlab=xlab,
+              ylab=ylab,
+              ...)
+      }
     }
     axis(1,at=seq(0,1,by=.25))
     axis(2,at=seq(0,1,by=.25))
